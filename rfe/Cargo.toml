@@ -1,0 +1,17 @@
+[package]
+name = "rfe"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = []
+std = ["dep:mio"]
+to_csv = []
+
+[dependencies]
+bincode.workspace = true
+anyhow.workspace = true
+hashbrown.workspace = true
+log.workspace = true
+mio = { version = "1.0.2", features = ["net", "os-poll"], optional = true }
+macros.path = "macros"

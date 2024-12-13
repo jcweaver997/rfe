@@ -1,0 +1,15 @@
+[package]
+name = "example_build"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+simple_logger.workspace = true
+rfe.path = "../../rfe"
+rfe.features = ["std"]
+example.path = "../../apps/example"
+ds.path = "../../apps/ds"
+hs.path = "../../apps/hs"
+to.path = "../../apps/to"
+anyhow.workspace = true
+hashbrown.workspace = true

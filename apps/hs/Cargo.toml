@@ -1,0 +1,22 @@
+[package]
+name = "hs"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/hs.rs"
+
+[features]
+default = ["std"]
+std = ["dep:sysinfo", "dep:watchdog-device"]
+
+[dependencies]
+rfe = { path = "../../rfe" }
+anyhow.workspace = true
+log.workspace = true
+watchdog-device = { version = "0.2.0", optional = true }
+sysinfo = { version = "0.32.0", default-features = false, optional = true, features = [
+    "component",
+    "disk",
+    "system",
+] }

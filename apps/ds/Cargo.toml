@@ -1,0 +1,19 @@
+[package]
+name = "ds"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/ds.rs"
+
+[features]
+default = ["std"]
+std = []
+
+[dependencies]
+rfe = { path = "../../rfe" }
+anyhow.workspace = true
+log.workspace = true
+chrono = "0.4.38"
+bincode.workspace = true
+hashbrown.workspace = true

@@ -1,0 +1,13 @@
+[package]
+name = "to"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/to.rs"
+
+[dependencies]
+rfe = { path = "../../rfe" }
+anyhow.workspace = true
+log.workspace = true
+hashbrown.workspace = true

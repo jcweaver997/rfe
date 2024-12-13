@@ -1,0 +1,10 @@
+[package]
+name = "ground"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rfe.path = "../../rfe"
+anyhow.workspace = true
+simple_logger = "5.0.0"
+log.workspace = true

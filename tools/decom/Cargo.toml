@@ -1,0 +1,15 @@
+[package]
+name = "decom"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "decom"
+path = "src/decom.rs"
+
+[dependencies]
+anyhow.workspace = true
+log.workspace = true
+simple_logger.workspace = true
+rfe = { path = "../../rfe", features = ["to_csv"] }
+bincode = { workspace = true, features = ["std"] }

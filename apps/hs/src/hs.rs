@@ -1,0 +1,154 @@
+#![no_std]
+use anyhow::Result;
+use log::*;
+use msg::{HsCmd, HsHk, HsOutData, Msg, MsgKind, TargetMsg};
+use rfe::*;
+
+extern crate alloc;
+use alloc::vec::Vec;
+
+mod watchdog;
+use utils::ManualAuto;
+pub use watchdog::*;
+
+#[cfg(feature = "std")]
+mod hs_std;
+#[cfg(feature = "std")]
+pub use hs_std::*;
+
+#[cfg(not(any(feature = "std")))]
+mod hs_stub;
+#[cfg(not(any(feature = "std")))]
+pub use hs_stub::*;
+
+pub trait SystemInfoGrabber {
+    fn check_cpu_usage(&mut self) -> Vec<u8>;
+    fn check_mem_usage(&mut self) -> u8;
+    fn check_fs_usage(&mut self) -> Vec<u8>;
+    fn check_temps(&mut self) -> Vec<i8>;
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct HsData {
+    out_data: HsOutData,
+    hk: HsHk,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct HsConfig {
+    pub cpu_checks: bool,
+    pub mem_checks: bool,
+    pub fs_checks: bool,
+    pub temp_checks: bool,
+    pub watchdog_enable: bool,
+    pub watchdog_timeout: i32,
+}
+
+pub struct Hs<'a> {
+    data: HsData,
+    config: HsConfig,
+    grabber: &'a mut dyn SystemInfoGrabber,
+    wd: WatchdogRef<'a>,
+    wd_value: ManualAuto<bool>,
+}
+
+impl<'a> Hs<'a> {
+    pub fn new(
+        config: HsConfig,
+        grabber: &'a mut dyn SystemInfoGrabber,
+        mut watchdog: WatchdogRef<'a>,
+    ) -> Self {
+        if config.watchdog_enable {
+            watchdog.enable();
+        } else {
+            watchdog.disable();
+        }
+        watchdog.set_time(config.watchdog_timeout);
+        Self {
+            data: Default::default(),
+            config,
+            grabber,
+            wd: watchdog,
+            wd_value: ManualAuto::new(config.watchdog_enable, false),
+        }
+    }
+
+    fn reset(&mut self) {
+        self.data = Default::default();
+    }
+}
+
+impl App for Hs<'_> {
+    fn init(&mut self, rfe: &mut Rfe) -> Result<()> {
+        self.reset();
+        rfe.subscribe(TargetMsg::new(rfe.get_instance(), MsgKind::HsCmd));
+
+        return Ok(());
+    }
+
+    fn run(&mut self, rfe: &mut Rfe) {
+        self.data.out_data.counter += 1;
+        while let Some(msg) = rfe.recv() {
+            match msg.msg {
+                Msg::HsCmd(cmd) => {
+                    self.data.hk.cmd_counter += 1;
+                    match cmd {
+                        HsCmd::Noop => {
+                            info!("Noop command received");
+                        }
+                        HsCmd::Reset => {
+                            info!("Reset command received");
+                            self.data = Default::default();
+                        }
+                        HsCmd::WatchdogEnableManual(v) => self.wd_value.manual_set(v),
+                        HsCmd::WatchdogEnableAuto(v) => self.wd_value.auto_set(v),
+                        HsCmd::WatchdogResumeAuto => self.wd_value.resume_auto(),
+                    }
+                }
+                _ => {
+                    warn!(
+                        "HS received unexpected message: {:?} from {:?}",
+                        msg.msg.kind(),
+                        msg.instance
+                    );
+                }
+            }
+        }
+
+        if self.wd_value.has_changed() {
+            if *self.wd_value.get() {
+                self.wd.enable();
+            } else {
+                self.wd.disable();
+            }
+        }
+        self.wd.feed();
+
+        if self.config.cpu_checks {
+            self.data.hk.cpu_usage = self.grabber.check_cpu_usage();
+        }
+        if self.config.mem_checks {
+            self.data.hk.mem_usage = self.grabber.check_mem_usage();
+        }
+        if self.config.fs_checks {
+            self.data.hk.fs_usage = self.grabber.check_fs_usage();
+        }
+        if self.config.temp_checks {
+            self.data.hk.temps = self.grabber.check_temps();
+        }
+    }
+
+    fn hk(&mut self, rfe: &mut Rfe) {
+        self.data.hk.counter = self.data.out_data.counter;
+
+        rfe.send(Msg::HsHk(self.data.hk.clone()));
+    }
+
+    fn out_data(&mut self, rfe: &mut Rfe) {
+        rfe.send(Msg::HsOutData(self.data.out_data));
+    }
+
+    fn get_app_rate(&self) -> Rate {
+        Rate::Hz1
+    }
+}
