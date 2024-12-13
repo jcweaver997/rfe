@@ -10,6 +10,7 @@ rfe.features = ["std"]
 example.path = "../../apps/example"
 ds.path = "../../apps/ds"
 hs.path = "../../apps/hs"
+hs.features = ["std"]
 to.path = "../../apps/to"
 anyhow.workspace = true
 hashbrown.workspace = true

@@ -5,28 +5,13 @@ use msg::{HsCmd, HsHk, HsOutData, Msg, MsgKind, TargetMsg};
 use rfe::*;
 
 extern crate alloc;
-use alloc::vec::Vec;
 
 mod watchdog;
 use utils::ManualAuto;
 pub use watchdog::*;
 
-#[cfg(feature = "std")]
-mod hs_std;
-#[cfg(feature = "std")]
-pub use hs_std::*;
-
-#[cfg(not(any(feature = "std")))]
-mod hs_stub;
-#[cfg(not(any(feature = "std")))]
-pub use hs_stub::*;
-
-pub trait SystemInfoGrabber {
-    fn check_cpu_usage(&mut self) -> Vec<u8>;
-    fn check_mem_usage(&mut self) -> u8;
-    fn check_fs_usage(&mut self) -> Vec<u8>;
-    fn check_temps(&mut self) -> Vec<i8>;
-}
+mod infograbber;
+pub use infograbber::*;
 
 #[derive(Debug, Default, Clone)]
 pub struct HsData {
@@ -58,12 +43,12 @@ impl<'a> Hs<'a> {
         grabber: &'a mut dyn SystemInfoGrabber,
         mut watchdog: WatchdogRef<'a>,
     ) -> Self {
+        watchdog.set_timeout(config.watchdog_timeout);
         if config.watchdog_enable {
             watchdog.enable();
         } else {
             watchdog.disable();
         }
-        watchdog.set_timeout(config.watchdog_timeout);
         Self {
             data: Default::default(),
             config,
