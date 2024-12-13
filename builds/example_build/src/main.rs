@@ -95,7 +95,7 @@ fn main() -> Result<()> {
     );
 
     let mut example = Example::new();
-    let mut ds = Ds::new(record, false);
+    let mut ds = Ds::<StdDsFile>::new(record, false);
     // let mut wd = LinuxWatchdog::new().unwrap();
     let mut grabber = StdSystemInfoGrabber::new();
     let mut hs = Hs::new(

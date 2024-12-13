@@ -1,15 +1,9 @@
 #![no_std]
 
-#[cfg(feature = "std")]
-mod ds_std;
 use bincode::encode_to_vec;
-#[cfg(feature = "std")]
-pub use ds_std::DsFile;
 
-#[cfg(not(feature = "std"))]
-mod ds_stub;
-#[cfg(not(feature = "std"))]
-pub use ds_stub::DsFile;
+mod file;
+pub use file::*;
 
 extern crate alloc;
 
@@ -20,10 +14,10 @@ use msg::{DsCmd, DsHk, DsOutData, DsTlmSet, Instance, Msg, TlmSetId};
 use rfe::*;
 
 #[derive(Debug, Default)]
-pub struct DsData {
+pub struct DsData<F: DsFile> {
     hk: DsHk,
     out_data: DsOutData,
-    file_list: HashMap<TlmSetId, DsFile>,
+    file_list: HashMap<TlmSetId, F>,
     enabled: bool,
 }
 
@@ -33,13 +27,13 @@ pub struct DsFileSettings {
     pub enabled: bool,
 }
 
-pub struct Ds {
-    data: DsData,
+pub struct Ds<F: DsFile> {
+    data: DsData<F>,
     tlm_sets: HashMap<TlmSetId, DsTlmSet>,
     start_enabled: bool,
 }
 
-impl Ds {
+impl<F: DsFile> Ds<F> {
     pub fn new(tlm_sets: HashMap<TlmSetId, DsTlmSet>, start_enabled: bool) -> Self {
         Self {
             data: Default::default(),
@@ -61,7 +55,7 @@ impl Ds {
     }
 }
 
-impl App for Ds {
+impl<F: DsFile> App for Ds<F> {
     fn init(&mut self, rfe: &mut rfe::Rfe) -> Result<()> {
         self.data = Default::default();
         self.data.enabled = self.start_enabled;
@@ -152,7 +146,7 @@ impl App for Ds {
                                         if let Some(f) = self.data.file_list.get_mut(&tlm_set.id) {
                                             f
                                         } else {
-                                            let f = DsFile::new(tlm_set.path.clone());
+                                            let f = F::new(tlm_set.path.clone());
                                             self.data.file_list.insert(tlm_set.id, f);
                                             self.data.file_list.get_mut(&tlm_set.id).unwrap()
                                         };

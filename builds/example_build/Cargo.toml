@@ -9,6 +9,7 @@ rfe.path = "../../rfe"
 rfe.features = ["std"]
 example.path = "../../apps/example"
 ds.path = "../../apps/ds"
+ds.features = ["std"]
 hs.path = "../../apps/hs"
 hs.features = ["std"]
 to.path = "../../apps/to"

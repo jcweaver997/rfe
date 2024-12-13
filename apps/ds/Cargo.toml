@@ -7,7 +7,7 @@ edition = "2021"
 path = "src/ds.rs"
 
 [features]
-default = ["std"]
+default = []
 std = []
 
 [dependencies]
