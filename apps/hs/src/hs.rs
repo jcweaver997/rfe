@@ -63,7 +63,7 @@ impl<'a> Hs<'a> {
         } else {
             watchdog.disable();
         }
-        watchdog.set_time(config.watchdog_timeout);
+        watchdog.set_timeout(config.watchdog_timeout);
         Self {
             data: Default::default(),
             config,

@@ -1,7 +1,7 @@
 pub trait Watchdog {
     fn enable(&mut self);
     fn disable(&mut self);
-    fn set_time(&mut self, time: i32);
+    fn set_timeout(&mut self, time: i32);
     fn feed(&mut self);
 }
 
@@ -42,7 +42,7 @@ mod watchdog_std {
             );
         }
 
-        fn set_time(&mut self, time: i32) {
+        fn set_timeout(&mut self, time: i32) {
             unwrap_print_err!(self.wd.set_timeout(time), "failed to set watchdog timeout");
         }
 
@@ -57,7 +57,7 @@ pub use watchdog_std::*;
 
 pub type WatchdogRef<'a> = Option<&'a mut dyn Watchdog>;
 
-impl<'a> Watchdog for Option<&'a mut dyn Watchdog> {
+impl<'a> Watchdog for WatchdogRef<'a> {
     fn enable(&mut self) {
         if let Some(wd) = self {
             wd.enable();
@@ -70,9 +70,9 @@ impl<'a> Watchdog for Option<&'a mut dyn Watchdog> {
         }
     }
 
-    fn set_time(&mut self, time: i32) {
+    fn set_timeout(&mut self, time: i32) {
         if let Some(wd) = self {
-            wd.set_time(time);
+            wd.set_timeout(time);
         }
     }
 
