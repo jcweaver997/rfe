@@ -8,7 +8,8 @@ path = "src/hs.rs"
 
 [features]
 default = []
-std = ["dep:sysinfo", "dep:watchdog-device"]
+std = ["dep:sysinfo"]
+nix = ["dep:watchdog-device"]
 
 [dependencies]
 rfe = { path = "../../rfe" }

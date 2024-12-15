@@ -5,8 +5,8 @@ pub trait Watchdog {
     fn feed(&mut self);
 }
 
-#[cfg(feature = "std")]
-mod watchdog_std {
+#[cfg(all(feature = "std", feature = "nix"))]
+mod watchdog_nix {
     use super::Watchdog;
     extern crate std;
     use crate::unwrap_print_err;
@@ -52,8 +52,8 @@ mod watchdog_std {
     }
 }
 
-#[cfg(feature = "std")]
-pub use watchdog_std::*;
+#[cfg(all(feature = "std", feature = "nix"))]
+pub use watchdog_nix::*;
 
 pub type WatchdogRef<'a> = Option<&'a mut dyn Watchdog>;
 
