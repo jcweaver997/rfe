@@ -43,3 +43,28 @@ impl TimeDriver for SchTimeDriver {
         time_data.sch_counter + time_data.time_offset
     }
 }
+
+#[cfg(feature = "rp2040")]
+pub struct Rp2040TimeDriver {
+    timer: rp2040_hal::timer::Timer,
+}
+
+#[cfg(feature = "rp2040")]
+impl Rp2040TimeDriver {
+    pub fn new(
+        timer: rp2040_pac::TIMER,
+        resets: &mut rp2040_pac::RESETS,
+        clocks: &rp2040_hal::clocks::ClocksManager,
+    ) -> Self {
+        Self {
+            timer: rp2040_hal::timer::Timer::new(timer, resets, clocks),
+        }
+    }
+}
+
+#[cfg(feature = "rp2040")]
+impl TimeDriver for Rp2040TimeDriver {
+    fn get_system_time(&self, time_data: TimeData) -> Timestamp {
+        self.timer.get_counter().ticks() + time_data.time_offset
+    }
+}

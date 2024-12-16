@@ -75,6 +75,12 @@ mod infograbber_std {
 pub use infograbber_std::*;
 
 pub struct StubSystemInfoGrabber;
+impl StubSystemInfoGrabber {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
 impl SystemInfoGrabber for StubSystemInfoGrabber {
     fn check_cpu_usage(&mut self) -> Vec<u8> {
         Vec::new()

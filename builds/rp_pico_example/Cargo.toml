@@ -5,8 +5,9 @@ edition = "2021"
 
 [dependencies]
 embassy-usb-logger = { git = "https://github.com/embassy-rs/embassy.git" }
-rfe = { path = "../../rfe", default-features = false }
+rfe = { path = "../../rfe", default-features = false, features = ["rp2040"] }
 to = { path = "../../apps/to", default-features = false }
+hs = { path = "../../apps/hs", default-features = false, features = ["rp2040"] }
 anyhow.workspace = true
 anyhow.default_features = false
 embedded-alloc = "0.6.0"

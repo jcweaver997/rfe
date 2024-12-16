@@ -82,3 +82,46 @@ impl<'a> Watchdog for WatchdogRef<'a> {
         }
     }
 }
+
+#[cfg(feature = "rp2040")]
+mod watchdog_rp2040 {
+    use rp2040_hal::Watchdog;
+
+    pub struct Rp2040Watchdog {
+        wd: Watchdog,
+        time: u32,
+    }
+
+    impl Rp2040Watchdog {
+        pub fn new(wd: Watchdog) -> Self {
+            Self {
+                wd,
+                time: 10 * 1000000,
+            }
+        }
+    }
+
+    impl super::Watchdog for Rp2040Watchdog {
+        fn enable(&mut self) {
+            self.wd
+                .start(rp2040_hal::fugit::Duration::<u32, 1, 1000000>::from_ticks(
+                    self.time,
+                ));
+        }
+
+        fn disable(&mut self) {
+            self.wd.disable();
+        }
+
+        fn set_timeout(&mut self, time: i32) {
+            self.time = time as u32 * 1000000;
+        }
+
+        fn feed(&mut self) {
+            self.wd.feed();
+        }
+    }
+}
+
+#[cfg(feature = "rp2040")]
+pub use watchdog_rp2040::*;

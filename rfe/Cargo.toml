@@ -6,6 +6,7 @@ edition = "2021"
 [features]
 default = []
 std = ["dep:mio"]
+rp2040 = ["dep:rp2040-hal", "dep:rp2040-pac"]
 to_csv = []
 
 [dependencies]
@@ -14,4 +15,6 @@ anyhow.workspace = true
 hashbrown.workspace = true
 log.workspace = true
 mio = { version = "1.0.2", features = ["net", "os-poll"], optional = true }
+rp2040-hal = { workspace = true, optional = true }
+rp2040-pac = { workspace = true, optional = true }
 macros.path = "macros"

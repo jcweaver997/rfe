@@ -16,6 +16,7 @@ mod app {
     };
     use embedded_hal::digital::v2::OutputPin;
     use fugit::Duration;
+    use hs::{Hs, HsConfig, Rp2040Watchdog, StubSystemInfoGrabber};
     use log::info;
     use msg::{ExampleHk, Instance, MsgKind, MsgPacket, TargetMsg, TlmSetItem, ToTlmSet};
     use rfe::{connector::Connector, Rate, *};
@@ -30,7 +31,7 @@ mod app {
     use embedded_alloc::LlffHeap as Heap;
     use panic_halt as _;
     use rp_pico::XOSC_CRYSTAL_FREQ;
-    use time::SchTimeDriver;
+    use time::Rp2040TimeDriver;
     extern crate alloc;
     use alloc::vec;
     use alloc::vec::Vec;
@@ -96,6 +97,8 @@ mod app {
     struct Local {
         led: Pin<Gpio25, FunctionSio<SioOutput>, PullNone>,
         usb: Option<Driver<'static, USB>>,
+        wd: Option<Watchdog>,
+        time_driver: Option<Rp2040TimeDriver>,
     }
 
     struct UsbBinding;
@@ -107,7 +110,7 @@ mod app {
         // Configure the clocks, watchdog - The default is to generate a 125 MHz system clock
         Mono::start(ctx.device.TIMER, &mut ctx.device.RESETS); // default rp2040 clock-rate is 125MHz
         let mut watchdog = Watchdog::new(ctx.device.WATCHDOG);
-        let _clocks = clocks::init_clocks_and_plls(
+        let clocks = clocks::init_clocks_and_plls(
             XOSC_CRYSTAL_FREQ,
             ctx.device.XOSC,
             ctx.device.CLOCKS,
@@ -138,6 +141,12 @@ mod app {
             .into_pull_type::<PullNone>()
             .into_push_pull_output();
 
+        let time_driver = Rp2040TimeDriver::new(
+            unsafe { rp_pico::pac::TIMER::steal() },
+            &mut ctx.device.RESETS,
+            &clocks,
+        );
+
         // Spawn heartbeat task
         blink_instance::spawn().ok();
         usb_logger::spawn().ok();
@@ -148,6 +157,8 @@ mod app {
             Local {
                 led,
                 usb: Some(driver),
+                wd: Some(watchdog),
+                time_driver: Some(time_driver),
             },
         )
     }
@@ -165,7 +176,7 @@ mod app {
         }
     }
 
-    #[task(local = [led], priority = 1)]
+    #[task(local = [led, wd, time_driver], priority = 1)]
     async fn blink_instance(mut ctx: blink_instance::Context) {
         let mut blink_app = BlinkApp {
             led_pin: &mut ctx.local.led,
@@ -188,13 +199,28 @@ mod app {
             },
         );
         let mut to = To::new(&mut log_connector, tlmsets);
-        let time_driver = SchTimeDriver::new();
+        let mut wd = Rp2040Watchdog::new(ctx.local.wd.take().unwrap());
+        let mut grabber = StubSystemInfoGrabber::new();
+        let mut hs = Hs::new(
+            HsConfig {
+                cpu_checks: false,
+                fs_checks: false,
+                mem_checks: false,
+                temp_checks: false,
+                watchdog_enable: true,
+                watchdog_timeout: 10,
+            },
+            &mut grabber,
+            Some(&mut wd),
+        );
+        let time_driver = ctx.local.time_driver.take().unwrap();
         let mut instance = RfeInstance::new(Instance::Example, &time_driver);
         instance.add_app("blink_app", &mut blink_app).unwrap();
         instance.add_app("to", &mut to).unwrap();
+        instance.add_app("hs", &mut hs).unwrap();
 
         let mut next_time = Mono::now() + Duration::<u64, 1, 1000000>::from_ticks(10000);
-        
+
         loop {
             instance.run();
             Mono::delay_until(next_time).await;
