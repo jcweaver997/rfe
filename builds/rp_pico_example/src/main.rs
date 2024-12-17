@@ -108,7 +108,7 @@ mod app {
     fn init(mut ctx: init::Context) -> (Shared, Local) {
         let p = embassy_rp::init(Default::default());
         // Configure the clocks, watchdog - The default is to generate a 125 MHz system clock
-        Mono::start(ctx.device.TIMER, &mut ctx.device.RESETS); // default rp2040 clock-rate is 125MHz
+
         let mut watchdog = Watchdog::new(ctx.device.WATCHDOG);
         let clocks = clocks::init_clocks_and_plls(
             XOSC_CRYSTAL_FREQ,
@@ -121,6 +121,11 @@ mod app {
         )
         .ok()
         .unwrap();
+        let time_driver = Rp2040TimeDriver::new(ctx.device.TIMER, &mut ctx.device.RESETS, &clocks);
+        Mono::start(
+            unsafe { rp_pico::pac::TIMER::steal() },
+            &mut ctx.device.RESETS,
+        ); // default rp2040 clock-rate is 125MHz
 
         {
             const HEAP_SIZE: usize = 1024 * 16;
@@ -140,12 +145,6 @@ mod app {
             .led
             .into_pull_type::<PullNone>()
             .into_push_pull_output();
-
-        let time_driver = Rp2040TimeDriver::new(
-            unsafe { rp_pico::pac::TIMER::steal() },
-            &mut ctx.device.RESETS,
-            &clocks,
-        );
 
         // Spawn heartbeat task
         blink_instance::spawn().ok();
@@ -208,12 +207,13 @@ mod app {
                 mem_checks: false,
                 temp_checks: false,
                 watchdog_enable: true,
-                watchdog_timeout: 10,
+                watchdog_timeout: 3,
             },
             &mut grabber,
             Some(&mut wd),
         );
         let time_driver = ctx.local.time_driver.take().unwrap();
+
         let mut instance = RfeInstance::new(Instance::Example, &time_driver);
         instance.add_app("blink_app", &mut blink_app).unwrap();
         instance.add_app("to", &mut to).unwrap();

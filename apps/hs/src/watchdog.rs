@@ -96,7 +96,7 @@ mod watchdog_rp2040 {
         pub fn new(wd: Watchdog) -> Self {
             Self {
                 wd,
-                time: 10 * 1000000,
+                time: 3 * 1000000,
             }
         }
     }
