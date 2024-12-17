@@ -15,10 +15,11 @@ mod app {
         usb::{self, Driver},
     };
     use embedded_hal::digital::v2::OutputPin;
+    use example::Example;
     use fugit::Duration;
     use hs::{Hs, HsConfig, Rp2040Watchdog, StubSystemInfoGrabber};
     use log::info;
-    use msg::{ExampleHk, Instance, MsgKind, MsgPacket, TargetMsg, TlmSetItem, ToTlmSet};
+    use msg::{Instance, MsgKind, MsgPacket, TargetMsg, TlmSetItem, ToTlmSet};
     use rfe::{connector::Connector, Rate, *};
     use rp_pico::hal::{
         clocks,
@@ -69,19 +70,13 @@ mod app {
             self.counter += 1;
             self.on = !self.on;
             if self.on {
-                info!("led on!");
                 self.led_pin.set_high().ok();
             } else {
-                info!("led off!");
                 self.led_pin.set_low().ok();
             }
         }
 
-        fn hk(&mut self, rfe: &mut Rfe) {
-            rfe.send(msg::Msg::ExampleHk(ExampleHk {
-                counter: self.counter,
-            }));
-        }
+        fn hk(&mut self, _rfe: &mut Rfe) {}
 
         fn out_data(&mut self, _rfe: &mut Rfe) {}
 
@@ -198,7 +193,9 @@ mod app {
             },
         );
         let mut to = To::new(&mut log_connector, tlmsets);
+        let mut example = Example::new();
         let mut wd = Rp2040Watchdog::new(ctx.local.wd.take().unwrap());
+
         let mut grabber = StubSystemInfoGrabber::new();
         let mut hs = Hs::new(
             HsConfig {
@@ -218,6 +215,7 @@ mod app {
         instance.add_app("blink_app", &mut blink_app).unwrap();
         instance.add_app("to", &mut to).unwrap();
         instance.add_app("hs", &mut hs).unwrap();
+        instance.add_app("example", &mut example).unwrap();
 
         let mut next_time = Mono::now() + Duration::<u64, 1, 1000000>::from_ticks(10000);
 

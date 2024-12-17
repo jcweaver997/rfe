@@ -41,7 +41,9 @@ impl App for Example {
                     ExampleCmd::Noop => info!("NOOP command received"),
                     ExampleCmd::Reset => {
                         info!("RESET command received");
+                        let perf = self.data.hk.perf;
                         self.data = Default::default();
+                        self.data.hk.perf = perf;
                     }
                 },
                 _ => {
