@@ -5,7 +5,11 @@ edition = "2021"
 
 [dependencies]
 rfe.path = "../../rfe"
-rfe.features = ["std"]
+rfe.features = ["std", "serde"]
 anyhow.workspace = true
 simple_logger = "5.0.0"
 log.workspace = true
+serde_json.workspace = true
+serde.workspace = true
+egui = "0.30.0"
+eframe = "0.30.0"

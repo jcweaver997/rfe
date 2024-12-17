@@ -1,27 +1,25 @@
 extern crate alloc;
-#[cfg(feature = "to_csv")]
-use crate::to_csv::ToCsv;
 use crate::utils::PerfData;
 use bincode::{Decode, Encode};
-#[cfg(feature = "to_csv")]
-use macros::ToCsv;
-
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 #[derive(Debug, Default, Clone, Copy, PartialEq, Encode, Decode)]
-#[cfg_attr(feature = "to_csv", derive(ToCsv))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ExampleHk {
     pub perf: PerfData,
     pub counter: u32,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Encode, Decode)]
-#[cfg_attr(feature = "to_csv", derive(ToCsv))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ExampleOutData {
     pub counter: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Encode, Decode)]
-#[cfg_attr(feature = "to_csv", derive(ToCsv))]
+#[derive(Debug, Default, Clone, PartialEq, Encode, Decode)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ExampleCmd {
+    #[default]
     Noop,
     Reset,
 }

@@ -3,13 +3,13 @@ use crate::Rfe;
 use bincode::{Decode, Encode};
 
 extern crate alloc;
-#[cfg(feature = "to_csv")]
-use crate::to_csv::ToCsv;
-#[cfg(feature = "to_csv")]
-use macros::ToCsv;
+
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Encode, Decode)]
-#[cfg_attr(feature = "to_csv", derive(ToCsv))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+
 pub struct PerfData {
     enter_time: Timestamp,
     elapsed: u32,

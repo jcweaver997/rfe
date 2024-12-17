@@ -15,13 +15,11 @@ mod ds;
 pub use ds::*;
 
 use crate::time::Timestamp;
-#[cfg(feature = "to_csv")]
-use crate::to_csv::ToCsv;
-#[cfg(feature = "to_csv")]
-use macros::ToCsv;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Encode, Decode)]
-#[cfg_attr(feature = "to_csv", derive(ToCsv))]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Encode, Decode)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct TargetMsg {
     // instance is FROM for tlm, is TO for cmds
     pub instance: Instance,
@@ -34,18 +32,21 @@ impl TargetMsg {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Encode, Decode)]
-#[cfg_attr(feature = "to_csv", derive(ToCsv))]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Encode, Decode)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Instance {
+    #[default]
+    None,
     All,
     Other,
     Example,
     Example2,
 }
 
-#[derive(Debug, Clone, PartialEq, Kind, Encode, Decode)]
-#[cfg_attr(feature = "to_csv", derive(ToCsv))]
+#[derive(Debug, Default, Clone, PartialEq, Kind, Encode, Decode)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Msg {
+    #[default]
     None,
     SubRequest,
     SubList(SubList),
@@ -66,7 +67,7 @@ pub enum Msg {
 }
 
 #[derive(Debug, Clone, PartialEq, Encode, Decode)]
-#[cfg_attr(feature = "to_csv", derive(ToCsv))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct MsgPacket {
     pub instance: Instance,
     pub msg: Msg,
@@ -91,22 +92,22 @@ impl MsgPacket {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Encode, Decode)]
-#[cfg_attr(feature = "to_csv", derive(ToCsv))]
+#[derive(Debug, Default, Clone, PartialEq, Encode, Decode)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SubList {
     pub subs: Vec<TargetMsg>,
 }
 
-#[derive(Debug, Clone, PartialEq, Encode, Decode)]
-#[cfg_attr(feature = "to_csv", derive(ToCsv))]
+#[derive(Debug, Default, Clone, PartialEq, Encode, Decode)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ReinitAppCmd {
     app_name: String,
 }
 
 pub type TlmSetId = u16;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Encode, Decode)]
-#[cfg_attr(feature = "to_csv", derive(ToCsv))]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash, Encode, Decode)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct TlmSetItem {
     pub target: TargetMsg,
     pub decimation: u16,
