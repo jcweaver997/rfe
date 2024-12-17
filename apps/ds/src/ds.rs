@@ -65,6 +65,7 @@ impl<F: DsFile> App for Ds<F> {
     }
 
     fn run(&mut self, rfe: &mut rfe::Rfe) {
+        self.data.hk.perf.enter(rfe);
         self.data.out_data.counter += 1;
         self.data.out_data.bytes_written_this_cycle = 0;
         while let Some(msg) = rfe.recv() {
@@ -169,6 +170,7 @@ impl<F: DsFile> App for Ds<F> {
         }
 
         self.data.out_data.bytes_written += self.data.out_data.bytes_written_this_cycle;
+        self.data.hk.perf.exit(rfe);
     }
 
     fn hk(&mut self, rfe: &mut rfe::Rfe) {

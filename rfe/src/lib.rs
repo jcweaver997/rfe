@@ -11,9 +11,7 @@ mod rfe;
 pub use rfe::*;
 
 #[cfg(feature = "to_csv")]
-mod to_csv;
-#[cfg(feature = "to_csv")]
-pub use to_csv::*;
+pub mod to_csv;
 
 pub mod time;
 pub mod utils;

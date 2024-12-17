@@ -72,6 +72,7 @@ impl App for Hs<'_> {
     }
 
     fn run(&mut self, rfe: &mut Rfe) {
+        self.data.hk.perf.enter(rfe);
         self.data.out_data.counter += 1;
         while let Some(msg) = rfe.recv() {
             match msg.msg {
@@ -121,6 +122,8 @@ impl App for Hs<'_> {
         if self.config.temp_checks {
             self.data.hk.temps = self.grabber.check_temps();
         }
+
+        self.data.hk.perf.exit(rfe);
     }
 
     fn hk(&mut self, rfe: &mut Rfe) {

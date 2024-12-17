@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 rfe.path = "../../rfe"
+rfe.features = ["std"]
 anyhow.workspace = true
 simple_logger = "5.0.0"
 log.workspace = true

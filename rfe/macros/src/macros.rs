@@ -93,7 +93,7 @@ pub fn to_csv_derive(input: TokenStream) -> TokenStream {
                 let field_name = field_ident.to_string();
 
                 quote! { {
-                    let mut field_csvs: Vec<String> = (&self.#field_ident as &dyn ToCsv).to_csv();
+                    let mut field_csvs: alloc::vec::Vec<String> = (&self.#field_ident as &dyn ToCsv).to_csv();
                     for entry in &mut field_csvs {
                         *entry = format!("{}.{}", #field_name, &entry);
                     }
@@ -103,11 +103,11 @@ pub fn to_csv_derive(input: TokenStream) -> TokenStream {
 
             quote! {
                 impl ToCsv for #name {
-                    fn to_csv(&self) -> Vec<String> {
+                    fn to_csv(&self) -> alloc::vec::Vec<String> {
                         extern crate alloc;
                         use alloc::format;
 
-                        let mut values:Vec<String> = Vec::new();
+                        let mut values:alloc::vec::Vec<String> = alloc::vec::Vec::new();
                         #(#arms)*
                         for value in &mut values {
                             *value = format!("{}", value);
@@ -130,7 +130,7 @@ pub fn to_csv_derive(input: TokenStream) -> TokenStream {
                     }
                     Fields::Unnamed(_) => {
                         quote! {Self::#variant_name(l) => {
-                            let mut field_csvs: Vec<String> = (l as &dyn ToCsv).to_csv();
+                            let mut field_csvs: alloc::vec::Vec<String> = (l as &dyn ToCsv).to_csv();
                             for entry in &mut field_csvs {
                                 *entry = format!("{}.{}", #variant_name_s, &entry);
                             }
@@ -145,10 +145,10 @@ pub fn to_csv_derive(input: TokenStream) -> TokenStream {
 
             quote! {
                 impl ToCsv for #name {
-                    fn to_csv(&self) -> Vec<String> {
+                    fn to_csv(&self) -> alloc::vec::Vec<String> {
                         extern crate alloc;
                         use alloc::format;
-                        let mut values: Vec<String> = Vec::new();
+                        let mut values: alloc::vec::Vec<String> = alloc::vec::Vec::new();
 
                         match self {
                             #(#arms)*

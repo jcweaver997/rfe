@@ -99,6 +99,7 @@ impl App for To<'_> {
     }
 
     fn run(&mut self, rfe: &mut Rfe) {
+        self.data.hk.perf.enter(rfe);
         self.data.out_data.counter += 1;
         let mut msgs = Vec::new();
         while let Some(msg) = rfe.recv() {
@@ -135,6 +136,7 @@ impl App for To<'_> {
                 rfe.post_message(msg);
             }
         }
+        self.data.hk.perf.exit(rfe);
     }
 
     fn hk(&mut self, rfe: &mut Rfe) {
