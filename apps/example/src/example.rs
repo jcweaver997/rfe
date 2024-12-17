@@ -32,6 +32,7 @@ impl App for Example {
     }
 
     fn run(&mut self, rfe: &mut rfe::Rfe) {
+        self.data.hk.perf.enter(rfe);
         self.data.out_data.counter += 1;
         info!("example running {:?}", self.data);
         while let Some(msg) = rfe.recv() {
@@ -52,6 +53,7 @@ impl App for Example {
         if self.data.out_data.counter > 10 {
             rfe.send(Msg::ExampleCmd(ExampleCmd::Reset));
         };
+        self.data.hk.perf.exit(rfe);
     }
 
     fn hk(&mut self, rfe: &mut rfe::Rfe) {

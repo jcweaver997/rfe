@@ -1,3 +1,41 @@
+use crate::time::Timestamp;
+use crate::Rfe;
+use bincode::{Decode, Encode};
+
+extern crate alloc;
+#[cfg(feature = "to_csv")]
+use crate::to_csv::ToCsv;
+#[cfg(feature = "to_csv")]
+use macros::ToCsv;
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Encode, Decode)]
+#[cfg_attr(feature = "to_csv", derive(ToCsv))]
+pub struct PerfData {
+    enter_time: Timestamp,
+    elapsed: u32,
+    rate: u32,
+}
+
+impl PerfData {
+    pub fn new(rfe: &Rfe) -> Self {
+        Self {
+            enter_time: rfe.get_met_time(),
+            elapsed: 0,
+            rate: 0,
+        }
+    }
+
+    pub fn enter(&mut self, rfe: &Rfe) {
+        let time = rfe.get_met_time();
+        self.rate = (time - self.enter_time) as u32;
+        self.enter_time = time;
+    }
+
+    pub fn exit(&mut self, rfe: &Rfe) {
+        let time = rfe.get_met_time();
+        self.elapsed = (time - self.enter_time) as u32;
+    }
+}
 
 pub struct ManualAuto<T: Clone + PartialEq> {
     value_auto: T,

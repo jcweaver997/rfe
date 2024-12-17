@@ -127,15 +127,10 @@ impl<'a> Rfe<'a> {
         self.msgs_recevied.pop_front()
     }
 
-    /// time in 10ms increments starting from power on
+    /// time starting from power on or program start
     pub fn get_met_time(&self) -> u64 {
-        self.time.borrow().time_data.sch_counter
-    }
-
-    /// time in 10ms increments based on set time. Shows MET until time is set
-    pub fn get_time(&self) -> u64 {
         let time = self.time.borrow();
-        time.time_data.sch_counter + time.time_data.time_offset
+        time.time_driver.get_monotonic_time(time.time_data)
     }
 
     /// Time in microseconds relative to system epoch
