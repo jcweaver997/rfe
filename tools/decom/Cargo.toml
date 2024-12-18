@@ -11,5 +11,5 @@ path = "src/decom.rs"
 anyhow.workspace = true
 log.workspace = true
 simple_logger.workspace = true
-rfe = { path = "../../rfe", features = [] }
+rfe = { path = "../../rfe", features = ["reflect"] }
 bincode = { workspace = true, features = ["std"] }

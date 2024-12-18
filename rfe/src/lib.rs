@@ -10,6 +10,7 @@ pub mod msg;
 mod rfe;
 pub use rfe::*;
 
+#[cfg(feature = "reflect")]
 pub mod reflect;
 
 pub use macros;

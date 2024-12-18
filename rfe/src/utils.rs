@@ -4,11 +4,12 @@ use bincode::{Decode, Encode};
 
 extern crate alloc;
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
+use crate as rfe;
+#[cfg(feature = "reflect")]
+use crate::macros::Reflect;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Encode, Decode)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "reflect", derive(Reflect))]
 
 pub struct PerfData {
     enter_time: Timestamp,

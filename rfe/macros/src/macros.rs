@@ -71,7 +71,7 @@ pub fn kind_derive(input: TokenStream) -> TokenStream {
 
     let expanded = quote! {
         #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Hash, Encode, Decode)]
-        #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+        #[cfg_attr(feature = "reflect", derive(Reflect))]
         pub enum #kind_name {
             #[default]
             #(#kind_enum_arms)*
@@ -103,161 +103,6 @@ pub fn kind_derive(input: TokenStream) -> TokenStream {
     TokenStream::from(expanded)
 }
 
-#[proc_macro_derive(ToCsv)]
-pub fn to_csv_derive(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
-
-    let name = input.ident;
-    let name_s = name.to_string();
-
-    let expanded = match input.data {
-        Data::Struct(data_struct) => {
-            let fields = data_struct.fields;
-
-            let arms = fields.iter().map(|field| {
-                let field_ident = field.clone().ident.unwrap();
-                let field_name = field_ident.to_string();
-
-                quote! { {
-                    let mut field_csvs: alloc::vec::Vec<alloc::string::String> = (&self.#field_ident as &dyn ToCsv).to_csv();
-                    for entry in &mut field_csvs {
-                        *entry = format!("{}.{}", #field_name, &entry);
-                    }
-                    values.extend(field_csvs);
-                } }
-            });
-
-            let arms_enum = fields.iter().map(|field| {
-                let field_ident = field.clone().ident.unwrap();
-                let field_name = field_ident.to_string();
-
-                quote! { {
-                    let mut field_csvs: alloc::vec::Vec<alloc::string::String> = (&self.#field_ident as &dyn ToCsv).enumerate();
-                    
-                    for entry in &mut field_csvs {
-                        *entry = format!("{}.{}", #field_name, &entry);
-                    }
-                    values.extend(field_csvs);
-                } }
-            });
-
-            quote! {
-                impl ToCsv for #name {
-                    fn to_csv(&self) -> alloc::vec::Vec<alloc::string::String> {
-                        extern crate alloc;
-                        use alloc::format;
-
-                        let mut values:alloc::vec::Vec<alloc::string::String> = alloc::vec::Vec::new();
-                        #(#arms)*
-                        return values;
-                    }
-
-                    fn enumerate(&self) -> alloc::vec::Vec<alloc::string::String> {
-                        extern crate alloc;
-                        use alloc::format;
-                        let mut values:alloc::vec::Vec<alloc::string::String> = alloc::vec::Vec::new();
-                        #(#arms_enum)*
-                        return values;
-    
-                    }
-                }
-            }
-        }
-        Data::Enum(data_enum) => {
-            let variants = data_enum.variants;
-            let arms = variants.iter().map(|variant| {
-                let variant_name = &variant.ident;
-                let variant_name_s = variant_name.to_string();
-
-                match &variant.fields {
-                    Fields::Unit => {
-                        quote! { Self::#variant_name => values.push(format!(" = {}::{}", #name_s, #variant_name_s)), }
-                        // quote! { Self::#variant_name => {}, }
-                    }
-                    Fields::Unnamed(_) => {
-                        quote! {Self::#variant_name(l) => {
-                            let mut field_csvs: alloc::vec::Vec<alloc::string::String> = (l as &dyn ToCsv).to_csv();
-                            for entry in &mut field_csvs {
-                                *entry = format!("{}.{}", #variant_name_s, &entry);
-                            }
-                            values.extend(field_csvs);
-                        },}
-                    }
-                    Fields::Named(_) => {
-                        panic!("Named fields not supported by ToCsv");
-                    }
-                }
-            });
-
-            let arms_enum = variants.iter().map(|variant| {
-                let variant_name = &variant.ident;
-                let variant_name_s = variant_name.to_string();
-
-                match &variant.fields {
-                    Fields::Unit => {
-                        quote! { values.push(format!(" = {}::{}", #name_s, #variant_name_s)); }
-                    }
-                    Fields::Unnamed(var) => {
-                        let var_type = 
-                        if let Some(first_field) = var.unnamed.first() {
-                            first_field
-                        } else {
-                            panic!("Struct has no fields!");
-                        };
-                        quote! {              
-                                {
-                                    let l = #var_type::default();
-                                    let mut field_csvs: alloc::vec::Vec<alloc::string::String> = (&l as &dyn ToCsv).enumerate();
-                                    
-                                    for entry in &mut field_csvs {
-                                        *entry = format!("{}.{}", #variant_name_s, &entry);
-                                    }
-                                    values.extend(field_csvs);
-                                }
-                            }              
-    
-                    }
-                    Fields::Named(_) => {
-                        panic!("Named fields not supported by ToCsv");
-                    }
-                }
-            });
-
-            quote! {
-                impl ToCsv for #name {
-                    fn to_csv(&self) -> alloc::vec::Vec<alloc::string::String> {
-                        extern crate alloc;
-                        use alloc::format;
-                        let mut values: alloc::vec::Vec<alloc::string::String> = alloc::vec::Vec::new();
-
-                        match self {
-                            #(#arms)*
-                        }
-                        return values;
-                    }
-
-                    fn enumerate(&self) -> alloc::vec::Vec<alloc::string::String> {
-                        extern crate alloc;
-                        use alloc::format;
-                       
-                        let mut values:alloc::vec::Vec<alloc::string::String> = alloc::vec::Vec::new();
-                        #(#arms_enum)*
-                        return values;
-
-                    }
-                }
-            }
-        }
-        Data::Union(_data_union) => {
-            return syn::Error::new_spanned(name, "ToCsv not implemented for unions")
-                .to_compile_error()
-                .into();
-        }
-    };
-
-    TokenStream::from(expanded)
-}
-
 
 #[proc_macro_derive(Reflect)]
 pub fn reflect_derive(input: TokenStream) -> TokenStream {
@@ -275,52 +120,38 @@ pub fn reflect_derive(input: TokenStream) -> TokenStream {
                 let field_name = field_ident.to_string();
 
                 quote! { {
-                    fields.push((#field_name, &mut self.#field_ident as &mut dyn Reflect));
-                } }
-            });
-
-            let arms_enum = fields.iter().map(|field| {
-                let field_ident = field.clone().ident.unwrap();
-                let field_name = field_ident.to_string();
-
-                quote! { {
-                    let mut field_csvs: alloc::vec::Vec<alloc::string::String> = (&self.#field_ident as &dyn ToCsv).enumerate();
-                    
-                    for entry in &mut field_csvs {
-                        *entry = format!("{}.{}", #field_name, &entry);
-                    }
-                    values.extend(field_csvs);
+                    fields.push((#field_name, &mut self.#field_ident as &mut dyn rfe::reflect::Reflect));
                 } }
             });
 
             quote! {
-                impl Reflect for #name {
-                    fn reflect_type(&self) -> ReflectType {
-                        ReflectType::Structure
+                impl rfe::reflect::Reflect for #name {
+                    fn reflect_type(&self) -> rfe::reflect::ReflectType {
+                        rfe::reflect::ReflectType::Structure
                     }
                 
                     fn type_name(&self) -> &str {
                         #name_s
                     }
                 
-                    fn fields(&mut self) -> Vec<(&str, &mut dyn Reflect)> {
-                        let mut fields = Vec::new();
+                    fn fields(&mut self) -> alloc::vec::Vec<(&str, &mut dyn rfe::reflect::Reflect)> {
+                        let mut fields = alloc::vec::Vec::new();
                         #(#field_arms)*
                         fields
                     }
                 
-                    fn set_value(&mut self, value: ReflectValue) {
+                    fn set_value(&mut self, value: rfe::reflect::ReflectValue) {
                     }
                 
-                    fn get_value(&self) -> ReflectValue {
-                        ReflectValue::None
+                    fn get_value(&self) -> rfe::reflect::ReflectValue {
+                        rfe::reflect::ReflectValue::None
                     }
                 
-                    fn variants(&self) -> Vec<(&str, Box<dyn Reflect>)> {
-                        Vec::new()
+                    fn variants(&self) -> alloc::vec::Vec<(&str, alloc::boxed::Box<dyn rfe::reflect::Reflect>)> {
+                        alloc::vec::Vec::new()
                     }
 
-                    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn Reflect> {
+                    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn rfe::reflect::Reflect> {
                         None
                     }
                 }
@@ -329,13 +160,10 @@ pub fn reflect_derive(input: TokenStream) -> TokenStream {
 
 
 
-
-
         Data::Enum(data_enum) => {
             let variants = data_enum.variants;
             let as_arms = variants.iter().enumerate().map(|(i, variant)| {
                 let variant_name = &variant.ident;
-                let variant_name_s = variant_name.to_string();
 
                 match &variant.fields {
                     Fields::Unit => {
@@ -345,7 +173,6 @@ pub fn reflect_derive(input: TokenStream) -> TokenStream {
                                 return Some(self);
                             } 
                         }
-                        // quote! { Self::#variant_name => {}, }
                     }
                     Fields::Unnamed(_) => {
                         quote! {
@@ -358,7 +185,7 @@ pub fn reflect_derive(input: TokenStream) -> TokenStream {
                         }
                     }
                     Fields::Named(_) => {
-                        panic!("Named fields not supported by ToCsv");
+                        panic!("Named fields not supported by Reflect");
                     }
                 }
             });
@@ -371,7 +198,7 @@ pub fn reflect_derive(input: TokenStream) -> TokenStream {
                     Fields::Unit => {
                         quote! { 
                             {
-                                let value: Box<dyn Reflect> = Box::new(Self::#variant_name);
+                                let value: alloc::boxed::Box<dyn rfe::reflect::Reflect> = alloc::boxed::Box::new(Self::#variant_name);
                                 variants.push((#variant_name_s, value)); 
                             }
                          }
@@ -379,46 +206,46 @@ pub fn reflect_derive(input: TokenStream) -> TokenStream {
                     Fields::Unnamed(_) => {
                         quote! {              
                                 {
-                                    let value: Box<dyn Reflect> = Box::new(Self::#variant_name(Default::default()));
+                                    let value: alloc::boxed::Box<dyn rfe::reflect::Reflect> = alloc::boxed::Box::new(Self::#variant_name(Default::default()));
                                     variants.push((#variant_name_s, value)); 
                                 }
                             }              
     
                     }
                     Fields::Named(_) => {
-                        panic!("Named fields not supported by ToCsv");
+                        panic!("Named fields not supported by Reflect");
                     }
                 }
             });
 
             quote! {
-                impl Reflect for #name {
-                    fn reflect_type(&self) -> ReflectType {
-                        ReflectType::Enumeration
+                impl rfe::reflect::Reflect for #name {
+                    fn reflect_type(&self) -> rfe::reflect::ReflectType {
+                        rfe::reflect::ReflectType::Enumeration
                     }
                 
                     fn type_name(&self) -> &str {
                         #name_s
                     }
                 
-                    fn fields(&mut self) -> Vec<(&str, &mut dyn Reflect)> {
-                        Vec::new()
+                    fn fields(&mut self) -> alloc::vec::Vec<(&str, &mut dyn rfe::reflect::Reflect)> {
+                        alloc::vec::Vec::new()
                     }
                 
-                    fn set_value(&mut self, value: ReflectValue) {
+                    fn set_value(&mut self, value: rfe::reflect::ReflectValue) {
                     }
                 
-                    fn get_value(&self) -> ReflectValue {
-                        ReflectValue::None
+                    fn get_value(&self) -> rfe::reflect::ReflectValue {
+                        rfe::reflect::ReflectValue::None
                     }
                 
-                    fn variants(&self) -> Vec<(&str, Box<dyn Reflect>)> {
-                        let mut variants = Vec::new();
+                    fn variants(&self) -> alloc::vec::Vec<(&str, alloc::boxed::Box<dyn rfe::reflect::Reflect>)> {
+                        let mut variants = alloc::vec::Vec::new();
                         #(#variant_arms)*
                         variants
                     }
 
-                    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn Reflect> {
+                    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn rfe::reflect::Reflect> {
                         #(#as_arms)*
                         panic!("variant incorrect");
                     }
@@ -426,7 +253,7 @@ pub fn reflect_derive(input: TokenStream) -> TokenStream {
             }
         }
         Data::Union(_data_union) => {
-            return syn::Error::new_spanned(name, "ToCsv not implemented for unions")
+            return syn::Error::new_spanned(name, "Reflect not implemented for unions")
                 .to_compile_error()
                 .into();
         }

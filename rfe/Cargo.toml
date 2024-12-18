@@ -7,7 +7,7 @@ edition = "2021"
 default = []
 std = ["dep:mio"]
 rp2040 = ["dep:rp2040-hal", "dep:rp2040-pac"]
-serde = ["dep:serde"]
+reflect = []
 
 [dependencies]
 bincode.workspace = true
@@ -18,4 +18,3 @@ mio = { version = "1.0.2", features = ["net", "os-poll"], optional = true }
 rp2040-hal = { workspace = true, optional = true }
 rp2040-pac = { workspace = true, optional = true }
 macros.path = "macros"
-serde = { workspace = true, optional = true }

@@ -96,6 +96,8 @@ impl ReflectValue {
             ReflectValue::Bool(b) => *b,
         }
     }
+
+    pub fn vec(self) -> Vec<ReflectValue> {}
 }
 
 pub trait Reflect: std::fmt::Debug {
@@ -444,125 +446,32 @@ impl Reflect for bool {
     }
 }
 
-// impl ToCsv for bool {
-//     fn to_csv(&self) -> Vec<String> {
-//         vec![format!(" = {}", self)]
-//     }
-//     fn enumerate(&self) -> Vec<String> {
-//         vec![format!(" = bool")]
-//     }
-// }
+impl<T: Reflect> Reflect for Vec<T> {
+    fn reflect_type(&self) -> ReflectType {
+        ReflectType::Value
+    }
 
-// impl<T: ToCsv + Default> ToCsv for Vec<T> {
-//     fn to_csv(&self) -> Vec<String> {
-//         self.iter()
-//             .enumerate()
-//             .map(|(i, x)| {
-//                 x.to_csv()
-//                     .iter()
-//                     .map(|a| format!("[{}].{}", i, a))
-//                     .collect::<Vec<String>>()
-//             })
-//             .flatten()
-//             .collect()
-//     }
-//     fn enumerate(&self) -> Vec<String> {
-//         T::default()
-//             .enumerate()
-//             .iter()
-//             .map(|x| format!("[{}].{}", std::any::type_name::<T>(), x))
-//             .collect::<Vec<String>>()
-//     }
-// }
+    fn type_name(&self) -> &str {
+        "vec[]"
+    }
 
-// impl<T: ToCsv + Default, const N: usize> ToCsv for [T; N] {
-//     fn to_csv(&self) -> Vec<String> {
-//         self.iter()
-//             .enumerate()
-//             .map(|(i, x)| {
-//                 x.to_csv()
-//                     .iter()
-//                     .map(|a| format!("[{}].{}", i, a))
-//                     .collect::<Vec<String>>()
-//             })
-//             .flatten()
-//             .collect()
-//     }
-//     fn enumerate(&self) -> Vec<String> {
-//         T::default()
-//             .enumerate()
-//             .iter()
-//             .map(|x| format!("[{}].{}", std::any::type_name::<T>(), x))
-//             .collect::<Vec<String>>()
-//     }
-// }
+    fn fields(&mut self) -> Vec<(&str, &mut dyn Reflect)> {
+        Vec::new()
+    }
 
-// impl<T1: ToCsv, T2: ToCsv> ToCsv for (T1, T2) {
-//     fn to_csv(&self) -> Vec<String> {
-//         let mut csvs = Vec::new();
-//         csvs.extend(self.0.to_csv().iter().map(|x| format!("[0].{}", x)));
-//         csvs.extend(self.1.to_csv().iter().map(|x| format!("[1].{}", x)));
-//         csvs
-//     }
-//     fn enumerate(&self) -> Vec<String> {
-//         vec![format!(
-//             " = ({}, {})",
-//             std::any::type_name::<T1>(),
-//             std::any::type_name::<T2>()
-//         )]
-//     }
-// }
+    fn set_value(&mut self, value: ReflectValue) {
+        *self = value.vec();
+    }
 
-// impl<T1: ToCsv, T2: ToCsv, T3: ToCsv> ToCsv for (T1, T2, T3) {
-//     fn to_csv(&self) -> Vec<String> {
-//         let mut csvs = Vec::new();
-//         csvs.extend(self.0.to_csv().iter().map(|x| format!("[0].{}", x)));
-//         csvs.extend(self.1.to_csv().iter().map(|x| format!("[1].{}", x)));
-//         csvs.extend(self.2.to_csv().iter().map(|x| format!("[2].{}", x)));
-//         csvs
-//     }
-//     fn enumerate(&self) -> Vec<String> {
-//         vec![format!(
-//             " = ({}, {}, {})",
-//             std::any::type_name::<T1>(),
-//             std::any::type_name::<T2>(),
-//             std::any::type_name::<T2>()
-//         )]
-//     }
-// }
+    fn get_value(&self) -> ReflectValue {
+        ReflectValue::Bool(*self)
+    }
 
-// impl<T1: ToCsv, T2: ToCsv, T3: ToCsv, T4: ToCsv> ToCsv for (T1, T2, T3, T4) {
-//     fn to_csv(&self) -> Vec<String> {
-//         let mut csvs = Vec::new();
-//         csvs.extend(self.0.to_csv().iter().map(|x| format!("[0].{}", x)));
-//         csvs.extend(self.1.to_csv().iter().map(|x| format!("[1].{}", x)));
-//         csvs.extend(self.2.to_csv().iter().map(|x| format!("[2].{}", x)));
-//         csvs.extend(self.3.to_csv().iter().map(|x| format!("[3].{}", x)));
-//         csvs
-//     }
-//     fn enumerate(&self) -> Vec<String> {
-//         vec![format!(
-//             " = ({}, {}, {}, {})",
-//             std::any::type_name::<T1>(),
-//             std::any::type_name::<T2>(),
-//             std::any::type_name::<T2>(),
-//             std::any::type_name::<T3>()
-//         )]
-//     }
-// }
+    fn variants(&self) -> Vec<(&str, Box<dyn Reflect>)> {
+        Vec::new()
+    }
 
-// impl<T: ToCsv> ToCsvClean for T {
-//     fn to_csv_clean(&self) -> Vec<String> {
-//         self.to_csv().iter().map(|x| to_csv_clean(x)).collect()
-//     }
-
-//     fn enumerate_clean(&self) -> Vec<String> {
-//         self.enumerate().iter().map(|x| to_csv_clean(x)).collect()
-//     }
-// }
-
-// fn to_csv_clean(s: &String) -> String {
-//     let s = s.replace(".[", "[");
-//     let s = s.replace(". =", " =");
-//     s
-// }
+    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn Reflect> {
+        None
+    }
+}

@@ -2,12 +2,13 @@ use crate::utils::PerfData;
 use bincode::{Decode, Encode};
 
 extern crate alloc;
+use crate as rfe;
+#[cfg(feature = "reflect")]
+use crate::macros::Reflect;
 use alloc::vec::Vec;
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Clone, PartialEq, Encode, Decode)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "reflect", derive(Reflect))]
 pub struct HsHk {
     pub perf: PerfData,
     pub counter: u32,
@@ -22,13 +23,13 @@ pub struct HsHk {
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Encode, Decode)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "reflect", derive(Reflect))]
 pub struct HsOutData {
     pub counter: u32,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Encode, Decode)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "reflect", derive(Reflect))]
 pub enum HsCmd {
     #[default]
     Noop,
