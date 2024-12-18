@@ -97,7 +97,9 @@ impl ReflectValue {
         }
     }
 
-    pub fn vec(self) -> Vec<ReflectValue> {}
+    pub fn vec(self) -> Vec<ReflectValue> {
+        
+    }
 }
 
 pub trait Reflect: std::fmt::Debug {
