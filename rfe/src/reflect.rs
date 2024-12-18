@@ -1,4 +1,6 @@
 extern crate alloc;
+use std::string::ToString;
+
 use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -21,6 +23,7 @@ pub enum ReflectValue {
     I64(i64),
     Vec(Vec<ReflectValue>),
     Str(String),
+    Bool(bool),
 }
 
 impl ReflectValue {
@@ -37,6 +40,13 @@ impl ReflectValue {
             ReflectValue::I64(v) => *v as i64,
             ReflectValue::Vec(_) => 0,
             ReflectValue::Str(_) => 0,
+            ReflectValue::Bool(b) => {
+                if *b {
+                    1
+                } else {
+                    0
+                }
+            }
         }
     }
 
@@ -53,6 +63,37 @@ impl ReflectValue {
             ReflectValue::I64(v) => *v as u64,
             ReflectValue::Vec(_) => 0,
             ReflectValue::Str(_) => 0,
+            ReflectValue::Bool(b) => {
+                if *b {
+                    1
+                } else {
+                    0
+                }
+            }
+        }
+    }
+
+    pub fn str(self) -> String {
+        match self {
+            ReflectValue::Str(s) => s,
+            _ => "".to_string(),
+        }
+    }
+
+    pub fn bool(&self) -> bool {
+        match self {
+            ReflectValue::None => false,
+            ReflectValue::U8(v) => *v == 0,
+            ReflectValue::U16(v) => *v == 0,
+            ReflectValue::U32(v) => *v == 0,
+            ReflectValue::U64(v) => *v == 0,
+            ReflectValue::I8(v) => *v == 0,
+            ReflectValue::I16(v) => *v == 0,
+            ReflectValue::I32(v) => *v == 0,
+            ReflectValue::I64(v) => *v == 0,
+            ReflectValue::Vec(_) => false,
+            ReflectValue::Str(_) => false,
+            ReflectValue::Bool(b) => *b,
         }
     }
 }
@@ -63,7 +104,8 @@ pub trait Reflect: std::fmt::Debug {
     fn fields(&mut self) -> Vec<(&str, &mut dyn Reflect)>;
     fn set_value(&mut self, value: ReflectValue);
     fn get_value(&self) -> ReflectValue;
-    fn variants(&self) -> Vec<Box<dyn Reflect>>;
+    fn variants(&self) -> Vec<(&str, Box<dyn Reflect>)>;
+    fn as_variant(&mut self, i: usize) -> Option<&mut dyn Reflect>;
 }
 
 pub fn path_set(reflect: &mut dyn Reflect, path: &str, value: ReflectValue) {
@@ -123,8 +165,102 @@ impl Reflect for u8 {
         ReflectValue::U8(*self)
     }
 
-    fn variants(&self) -> Vec<Box<dyn Reflect>> {
+    fn variants(&self) -> Vec<(&str, Box<dyn Reflect>)> {
         Vec::new()
+    }
+
+    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn Reflect> {
+        None
+    }
+}
+
+impl Reflect for u16 {
+    fn reflect_type(&self) -> ReflectType {
+        ReflectType::Value
+    }
+
+    fn type_name(&self) -> &str {
+        "u16"
+    }
+
+    fn fields(&mut self) -> Vec<(&str, &mut dyn Reflect)> {
+        Vec::new()
+    }
+
+    fn set_value(&mut self, value: ReflectValue) {
+        *self = value.unsigned() as Self;
+    }
+
+    fn get_value(&self) -> ReflectValue {
+        ReflectValue::U16(*self)
+    }
+
+    fn variants(&self) -> Vec<(&str, Box<dyn Reflect>)> {
+        Vec::new()
+    }
+
+    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn Reflect> {
+        None
+    }
+}
+
+impl Reflect for u32 {
+    fn reflect_type(&self) -> ReflectType {
+        ReflectType::Value
+    }
+
+    fn type_name(&self) -> &str {
+        "u32"
+    }
+
+    fn fields(&mut self) -> Vec<(&str, &mut dyn Reflect)> {
+        Vec::new()
+    }
+
+    fn set_value(&mut self, value: ReflectValue) {
+        *self = value.unsigned() as Self;
+    }
+
+    fn get_value(&self) -> ReflectValue {
+        ReflectValue::U32(*self)
+    }
+
+    fn variants(&self) -> Vec<(&str, Box<dyn Reflect>)> {
+        Vec::new()
+    }
+
+    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn Reflect> {
+        None
+    }
+}
+
+impl Reflect for u64 {
+    fn reflect_type(&self) -> ReflectType {
+        ReflectType::Value
+    }
+
+    fn type_name(&self) -> &str {
+        "u64"
+    }
+
+    fn fields(&mut self) -> Vec<(&str, &mut dyn Reflect)> {
+        Vec::new()
+    }
+
+    fn set_value(&mut self, value: ReflectValue) {
+        *self = value.unsigned() as Self;
+    }
+
+    fn get_value(&self) -> ReflectValue {
+        ReflectValue::U64(*self)
+    }
+
+    fn variants(&self) -> Vec<(&str, Box<dyn Reflect>)> {
+        Vec::new()
+    }
+
+    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn Reflect> {
+        None
     }
 }
 
@@ -149,108 +285,164 @@ impl Reflect for i8 {
         ReflectValue::I8(*self)
     }
 
-    fn variants(&self) -> Vec<Box<dyn Reflect>> {
+    fn variants(&self) -> Vec<(&str, Box<dyn Reflect>)> {
         Vec::new()
+    }
+
+    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn Reflect> {
+        None
     }
 }
 
-// pub trait ToCsvClean {
-//     fn to_csv_clean(&self) -> Vec<String>;
-//     fn enumerate_clean(&self) -> Vec<String>;
-// }
+impl Reflect for i16 {
+    fn reflect_type(&self) -> ReflectType {
+        ReflectType::Value
+    }
 
-// impl ToCsv for u8 {
-//     fn to_csv(&self) -> Vec<String> {
-//         vec![format!(" = {}", self)]
-//     }
+    fn type_name(&self) -> &str {
+        "i16"
+    }
 
-//     fn enumerate(&self) -> Vec<String> {
-//         vec![format!(" = u8")]
-//     }
-// }
+    fn fields(&mut self) -> Vec<(&str, &mut dyn Reflect)> {
+        Vec::new()
+    }
 
-// impl ToCsv for i8 {
-//     fn to_csv(&self) -> Vec<String> {
-//         vec![format!(" = {}", self)]
-//     }
+    fn set_value(&mut self, value: ReflectValue) {
+        *self = value.signed() as Self;
+    }
 
-//     fn enumerate(&self) -> Vec<String> {
-//         vec![format!(" = i8")]
-//     }
-// }
+    fn get_value(&self) -> ReflectValue {
+        ReflectValue::I16(*self)
+    }
 
-// impl ToCsv for u16 {
-//     fn to_csv(&self) -> Vec<String> {
-//         vec![format!(" = {}", self)]
-//     }
+    fn variants(&self) -> Vec<(&str, Box<dyn Reflect>)> {
+        Vec::new()
+    }
 
-//     fn enumerate(&self) -> Vec<String> {
-//         vec![format!(" = u16")]
-//     }
-// }
+    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn Reflect> {
+        None
+    }
+}
 
-// impl ToCsv for i16 {
-//     fn to_csv(&self) -> Vec<String> {
-//         vec![format!(" = {}", self)]
-//     }
-//     fn enumerate(&self) -> Vec<String> {
-//         vec![format!(" = i16")]
-//     }
-// }
+impl Reflect for i32 {
+    fn reflect_type(&self) -> ReflectType {
+        ReflectType::Value
+    }
 
-// impl ToCsv for u32 {
-//     fn to_csv(&self) -> Vec<String> {
-//         vec![format!(" = {}", self)]
-//     }
-//     fn enumerate(&self) -> Vec<String> {
-//         vec![format!(" = u32")]
-//     }
-// }
+    fn type_name(&self) -> &str {
+        "i32"
+    }
 
-// impl ToCsv for i32 {
-//     fn to_csv(&self) -> Vec<String> {
-//         vec![format!(" = {}", self)]
-//     }
-//     fn enumerate(&self) -> Vec<String> {
-//         vec![format!(" = i32")]
-//     }
-// }
+    fn fields(&mut self) -> Vec<(&str, &mut dyn Reflect)> {
+        Vec::new()
+    }
 
-// impl ToCsv for u64 {
-//     fn to_csv(&self) -> Vec<String> {
-//         vec![format!(" = {}", self)]
-//     }
-//     fn enumerate(&self) -> Vec<String> {
-//         vec![format!(" = u64")]
-//     }
-// }
+    fn set_value(&mut self, value: ReflectValue) {
+        *self = value.signed() as Self;
+    }
 
-// impl ToCsv for i64 {
-//     fn to_csv(&self) -> Vec<String> {
-//         vec![format!(" = {}", self)]
-//     }
-//     fn enumerate(&self) -> Vec<String> {
-//         vec![format!(" = i64")]
-//     }
-// }
+    fn get_value(&self) -> ReflectValue {
+        ReflectValue::I32(*self)
+    }
 
-// impl ToCsv for &str {
-//     fn to_csv(&self) -> Vec<String> {
-//         vec![format!(" = {}", self)]
-//     }
-//     fn enumerate(&self) -> Vec<String> {
-//         vec![format!(" = String")]
-//     }
-// }
+    fn variants(&self) -> Vec<(&str, Box<dyn Reflect>)> {
+        Vec::new()
+    }
 
-// impl ToCsv for String {
-//     fn to_csv(&self) -> Vec<String> {
-//         vec![format!(" = {}", self)]
-//     }
-//     fn enumerate(&self) -> Vec<String> {
-//         vec![format!(" = String")]
-//     }
-// }
+    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn Reflect> {
+        None
+    }
+}
+
+impl Reflect for i64 {
+    fn reflect_type(&self) -> ReflectType {
+        ReflectType::Value
+    }
+
+    fn type_name(&self) -> &str {
+        "i64"
+    }
+
+    fn fields(&mut self) -> Vec<(&str, &mut dyn Reflect)> {
+        Vec::new()
+    }
+
+    fn set_value(&mut self, value: ReflectValue) {
+        *self = value.signed() as Self;
+    }
+
+    fn get_value(&self) -> ReflectValue {
+        ReflectValue::I64(*self)
+    }
+
+    fn variants(&self) -> Vec<(&str, Box<dyn Reflect>)> {
+        Vec::new()
+    }
+
+    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn Reflect> {
+        None
+    }
+}
+
+impl Reflect for String {
+    fn reflect_type(&self) -> ReflectType {
+        ReflectType::Value
+    }
+
+    fn type_name(&self) -> &str {
+        "str"
+    }
+
+    fn fields(&mut self) -> Vec<(&str, &mut dyn Reflect)> {
+        Vec::new()
+    }
+
+    fn set_value(&mut self, value: ReflectValue) {
+        *self = value.str();
+    }
+
+    fn get_value(&self) -> ReflectValue {
+        ReflectValue::Str(self.to_string())
+    }
+
+    fn variants(&self) -> Vec<(&str, Box<dyn Reflect>)> {
+        Vec::new()
+    }
+
+    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn Reflect> {
+        None
+    }
+}
+
+impl Reflect for bool {
+    fn reflect_type(&self) -> ReflectType {
+        ReflectType::Value
+    }
+
+    fn type_name(&self) -> &str {
+        "bool"
+    }
+
+    fn fields(&mut self) -> Vec<(&str, &mut dyn Reflect)> {
+        Vec::new()
+    }
+
+    fn set_value(&mut self, value: ReflectValue) {
+        *self = value.bool();
+    }
+
+    fn get_value(&self) -> ReflectValue {
+        ReflectValue::Bool(*self)
+    }
+
+    fn variants(&self) -> Vec<(&str, Box<dyn Reflect>)> {
+        Vec::new()
+    }
+
+    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn Reflect> {
+        None
+    }
+}
 
 // impl ToCsv for bool {
 //     fn to_csv(&self) -> Vec<String> {

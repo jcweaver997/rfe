@@ -101,6 +101,13 @@ struct TestStruct {
     counter: i8,
 }
 
+#[derive(Debug, Default, Reflect)]
+enum EnumTest {
+    #[default]
+    None,
+    Test(TestStruct),
+}
+
 fn main() -> Result<()> {
     SimpleLogger::new()
         .with_level(LevelFilter::Debug)
@@ -117,9 +124,20 @@ fn main() -> Result<()> {
     );
 
     let mut test = TestStruct::default();
-    info!("{:?}", test);
+    info!("{:?}", test.fields());
     reflect::path_set(&mut test, "counter", ReflectValue::I64(1));
-    info!("{:?}", test);
+    info!("{:?}", test.fields());
+
+    let mut test2 = EnumTest::None;
+
+    // info!("{:?}", test2);
+
+    // let testref = test2.as_variant(1).unwrap();
+
+    // test2.as_variant(1).unwrap().fields()[0]
+    //     .1
+    //     .set_value(ReflectValue::I64(3));
+    // info!("{:?}", test2);
 
     // spawn(|| {
     //     let mut udp = UdpConnector::new("127.0.0.1", 7011, "127.0.0.1", 7010).unwrap();
