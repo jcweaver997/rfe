@@ -13,7 +13,7 @@ mod serial_std {
     use anyhow::anyhow;
     use mio_serial::{SerialPortBuilder, SerialPortBuilderExt, SerialStream};
     pub struct StdSerialPort {
-        config: SerialPortBuilder,
+        pub config: SerialPortBuilder,
         serial: Option<SerialStream>,
     }
 
