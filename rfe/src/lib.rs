@@ -14,6 +14,7 @@ pub use rfe::*;
 pub mod reflect;
 
 pub use macros;
+pub mod serial;
 pub mod time;
 pub mod utils;
 
