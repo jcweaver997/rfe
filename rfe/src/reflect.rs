@@ -1,10 +1,25 @@
 extern crate alloc;
+use core::mem::zeroed;
 use std::string::ToString;
 
 use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
+use hashbrown::HashMap;
 
+pub trait Reflect: std::fmt::Debug {
+    fn reflect_type(&self) -> ReflectType;
+    fn type_name(&self) -> &str;
+    fn fields(&mut self) -> Vec<(&str, &mut dyn Reflect)>;
+    fn set_value(&mut self, value: ReflectValue);
+    fn get_value(&self) -> ReflectValue;
+    fn variants(&self) -> Vec<(&'static str, Box<dyn Reflect>)>;
+    fn convert_variant(&mut self, i: usize);
+    fn unwrap_variant(&mut self) -> Option<(&str, &mut dyn Reflect)>;
+    fn as_vec(&mut self) -> Option<Vec<&mut dyn Reflect>>;
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReflectType {
     Value,
     Enumeration,
@@ -39,7 +54,13 @@ impl ReflectValue {
             ReflectValue::I32(v) => *v as i64,
             ReflectValue::I64(v) => *v as i64,
             ReflectValue::Vec(_) => 0,
-            ReflectValue::Str(_) => 0,
+            ReflectValue::Str(s) => {
+                if let Ok(v) = s.parse() {
+                    v
+                } else {
+                    0
+                }
+            }
             ReflectValue::Bool(b) => {
                 if *b {
                     1
@@ -62,7 +83,13 @@ impl ReflectValue {
             ReflectValue::I32(v) => *v as u64,
             ReflectValue::I64(v) => *v as u64,
             ReflectValue::Vec(_) => 0,
-            ReflectValue::Str(_) => 0,
+            ReflectValue::Str(s) => {
+                if let Ok(v) = s.parse() {
+                    v
+                } else {
+                    0
+                }
+            }
             ReflectValue::Bool(b) => {
                 if *b {
                     1
@@ -76,7 +103,17 @@ impl ReflectValue {
     pub fn str(self) -> String {
         match self {
             ReflectValue::Str(s) => s,
-            _ => "".to_string(),
+            ReflectValue::None => "".to_string(),
+            ReflectValue::U8(v) => v.to_string(),
+            ReflectValue::U16(v) => v.to_string(),
+            ReflectValue::U32(v) => v.to_string(),
+            ReflectValue::U64(v) => v.to_string(),
+            ReflectValue::I8(v) => v.to_string(),
+            ReflectValue::I16(v) => v.to_string(),
+            ReflectValue::I32(v) => v.to_string(),
+            ReflectValue::I64(v) => v.to_string(),
+            ReflectValue::Vec(_v) => "".to_string(),
+            ReflectValue::Bool(v) => v.to_string(),
         }
     }
 
@@ -98,18 +135,12 @@ impl ReflectValue {
     }
 
     pub fn vec(self) -> Vec<ReflectValue> {
-        
+        if let ReflectValue::Vec(v) = self {
+            v
+        } else {
+            Vec::new()
+        }
     }
-}
-
-pub trait Reflect: std::fmt::Debug {
-    fn reflect_type(&self) -> ReflectType;
-    fn type_name(&self) -> &str;
-    fn fields(&mut self) -> Vec<(&str, &mut dyn Reflect)>;
-    fn set_value(&mut self, value: ReflectValue);
-    fn get_value(&self) -> ReflectValue;
-    fn variants(&self) -> Vec<(&str, Box<dyn Reflect>)>;
-    fn as_variant(&mut self, i: usize) -> Option<&mut dyn Reflect>;
 }
 
 pub fn path_set(reflect: &mut dyn Reflect, path: &str, value: ReflectValue) {
@@ -148,6 +179,51 @@ pub fn path_get<'a>(reflect: &'a mut dyn Reflect, path: &str) -> Option<&'a mut 
     Some(next)
 }
 
+fn _flatten<'a>(reflect: &'a mut dyn Reflect) -> HashMap<String, &'a mut dyn Reflect> {
+    let mut list = HashMap::new();
+
+    match reflect.reflect_type() {
+        ReflectType::Value => match reflect.get_value() {
+            ReflectValue::Vec(_) => {
+                for (i, r) in reflect.as_vec().unwrap().into_iter().enumerate() {
+                    let map = _flatten(r);
+                    for (sn, v) in map {
+                        list.insert(alloc::format!("[{i}].{}", sn), v);
+                    }
+                }
+            }
+            _ => {
+                list.insert("".to_string(), reflect);
+            }
+        },
+        ReflectType::Enumeration => {
+            if let Some((name, r)) = reflect.unwrap_variant() {
+                let map = _flatten(r);
+                for (sn, v) in map {
+                    list.insert(alloc::format!("{}.{}", name, sn), v);
+                }
+            }
+        }
+        ReflectType::Structure => {
+            for (name, r) in reflect.fields() {
+                let map = _flatten(r);
+                for (sn, v) in map {
+                    list.insert(alloc::format!("{}.{}", name, sn), v);
+                }
+            }
+        }
+    }
+
+    list
+}
+
+pub fn flatten<'a>(reflect: &'a mut dyn Reflect) -> HashMap<String, &'a mut dyn Reflect> {
+    _flatten(reflect)
+        .into_iter()
+        .map(|(k, v)| (k[..k.len() - 1].to_string().replace(".[", "["), v))
+        .collect()
+}
+
 impl Reflect for u8 {
     fn reflect_type(&self) -> ReflectType {
         ReflectType::Value
@@ -169,11 +245,17 @@ impl Reflect for u8 {
         ReflectValue::U8(*self)
     }
 
-    fn variants(&self) -> Vec<(&str, Box<dyn Reflect>)> {
+    fn variants(&self) -> Vec<(&'static str, Box<dyn Reflect>)> {
         Vec::new()
     }
 
-    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn Reflect> {
+    fn convert_variant(&mut self, _i: usize) {}
+
+    fn unwrap_variant(&mut self) -> Option<(&str, &mut dyn Reflect)> {
+        None
+    }
+
+    fn as_vec(&mut self) -> Option<Vec<&mut dyn Reflect>> {
         None
     }
 }
@@ -199,11 +281,17 @@ impl Reflect for u16 {
         ReflectValue::U16(*self)
     }
 
-    fn variants(&self) -> Vec<(&str, Box<dyn Reflect>)> {
+    fn variants(&self) -> Vec<(&'static str, Box<dyn Reflect>)> {
         Vec::new()
     }
 
-    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn Reflect> {
+    fn convert_variant(&mut self, _i: usize) {}
+
+    fn unwrap_variant(&mut self) -> Option<(&str, &mut dyn Reflect)> {
+        None
+    }
+
+    fn as_vec(&mut self) -> Option<Vec<&mut dyn Reflect>> {
         None
     }
 }
@@ -229,11 +317,17 @@ impl Reflect for u32 {
         ReflectValue::U32(*self)
     }
 
-    fn variants(&self) -> Vec<(&str, Box<dyn Reflect>)> {
+    fn variants(&self) -> Vec<(&'static str, Box<dyn Reflect>)> {
         Vec::new()
     }
 
-    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn Reflect> {
+    fn convert_variant(&mut self, _i: usize) {}
+
+    fn unwrap_variant(&mut self) -> Option<(&str, &mut dyn Reflect)> {
+        None
+    }
+
+    fn as_vec(&mut self) -> Option<Vec<&mut dyn Reflect>> {
         None
     }
 }
@@ -259,11 +353,17 @@ impl Reflect for u64 {
         ReflectValue::U64(*self)
     }
 
-    fn variants(&self) -> Vec<(&str, Box<dyn Reflect>)> {
+    fn variants(&self) -> Vec<(&'static str, Box<dyn Reflect>)> {
         Vec::new()
     }
 
-    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn Reflect> {
+    fn convert_variant(&mut self, _i: usize) {}
+
+    fn unwrap_variant(&mut self) -> Option<(&str, &mut dyn Reflect)> {
+        None
+    }
+
+    fn as_vec(&mut self) -> Option<Vec<&mut dyn Reflect>> {
         None
     }
 }
@@ -289,11 +389,17 @@ impl Reflect for i8 {
         ReflectValue::I8(*self)
     }
 
-    fn variants(&self) -> Vec<(&str, Box<dyn Reflect>)> {
+    fn variants(&self) -> Vec<(&'static str, Box<dyn Reflect>)> {
         Vec::new()
     }
 
-    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn Reflect> {
+    fn convert_variant(&mut self, _i: usize) {}
+
+    fn unwrap_variant(&mut self) -> Option<(&str, &mut dyn Reflect)> {
+        None
+    }
+
+    fn as_vec(&mut self) -> Option<Vec<&mut dyn Reflect>> {
         None
     }
 }
@@ -319,11 +425,17 @@ impl Reflect for i16 {
         ReflectValue::I16(*self)
     }
 
-    fn variants(&self) -> Vec<(&str, Box<dyn Reflect>)> {
+    fn variants(&self) -> Vec<(&'static str, Box<dyn Reflect>)> {
         Vec::new()
     }
 
-    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn Reflect> {
+    fn convert_variant(&mut self, _i: usize) {}
+
+    fn unwrap_variant(&mut self) -> Option<(&str, &mut dyn Reflect)> {
+        None
+    }
+
+    fn as_vec(&mut self) -> Option<Vec<&mut dyn Reflect>> {
         None
     }
 }
@@ -349,11 +461,17 @@ impl Reflect for i32 {
         ReflectValue::I32(*self)
     }
 
-    fn variants(&self) -> Vec<(&str, Box<dyn Reflect>)> {
+    fn variants(&self) -> Vec<(&'static str, Box<dyn Reflect>)> {
         Vec::new()
     }
 
-    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn Reflect> {
+    fn convert_variant(&mut self, _i: usize) {}
+
+    fn unwrap_variant(&mut self) -> Option<(&str, &mut dyn Reflect)> {
+        None
+    }
+
+    fn as_vec(&mut self) -> Option<Vec<&mut dyn Reflect>> {
         None
     }
 }
@@ -379,11 +497,17 @@ impl Reflect for i64 {
         ReflectValue::I64(*self)
     }
 
-    fn variants(&self) -> Vec<(&str, Box<dyn Reflect>)> {
+    fn variants(&self) -> Vec<(&'static str, Box<dyn Reflect>)> {
         Vec::new()
     }
 
-    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn Reflect> {
+    fn convert_variant(&mut self, _i: usize) {}
+
+    fn unwrap_variant(&mut self) -> Option<(&str, &mut dyn Reflect)> {
+        None
+    }
+
+    fn as_vec(&mut self) -> Option<Vec<&mut dyn Reflect>> {
         None
     }
 }
@@ -409,11 +533,17 @@ impl Reflect for String {
         ReflectValue::Str(self.to_string())
     }
 
-    fn variants(&self) -> Vec<(&str, Box<dyn Reflect>)> {
+    fn variants(&self) -> Vec<(&'static str, Box<dyn Reflect>)> {
         Vec::new()
     }
 
-    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn Reflect> {
+    fn convert_variant(&mut self, _i: usize) {}
+
+    fn unwrap_variant(&mut self) -> Option<(&str, &mut dyn Reflect)> {
+        None
+    }
+
+    fn as_vec(&mut self) -> Option<Vec<&mut dyn Reflect>> {
         None
     }
 }
@@ -439,11 +569,17 @@ impl Reflect for bool {
         ReflectValue::Bool(*self)
     }
 
-    fn variants(&self) -> Vec<(&str, Box<dyn Reflect>)> {
+    fn variants(&self) -> Vec<(&'static str, Box<dyn Reflect>)> {
         Vec::new()
     }
 
-    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn Reflect> {
+    fn convert_variant(&mut self, _i: usize) {}
+
+    fn unwrap_variant(&mut self) -> Option<(&str, &mut dyn Reflect)> {
+        None
+    }
+
+    fn as_vec(&mut self) -> Option<Vec<&mut dyn Reflect>> {
         None
     }
 }
@@ -462,18 +598,40 @@ impl<T: Reflect> Reflect for Vec<T> {
     }
 
     fn set_value(&mut self, value: ReflectValue) {
-        *self = value.vec();
+        if let ReflectValue::Vec(v) = value {
+            *self = v
+                .into_iter()
+                .map(|x| {
+                    let mut t: T = unsafe { zeroed() };
+                    t.set_value(x);
+                    t
+                })
+                .collect();
+        }
     }
 
     fn get_value(&self) -> ReflectValue {
-        ReflectValue::Bool(*self)
+        ReflectValue::Vec(self.iter().map(|x| x.get_value()).collect())
     }
 
-    fn variants(&self) -> Vec<(&str, Box<dyn Reflect>)> {
+    fn variants(&self) -> Vec<(&'static str, Box<dyn Reflect>)> {
         Vec::new()
     }
 
-    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn Reflect> {
+    fn convert_variant(&mut self, _i: usize) {}
+
+    fn unwrap_variant(&mut self) -> Option<(&str, &mut dyn Reflect)> {
         None
+    }
+
+    fn as_vec<'a>(&'a mut self) -> Option<Vec<&'a mut dyn Reflect>> {
+        Some(
+            self.iter_mut()
+                .map(|x| {
+                    let v: &mut dyn Reflect = x;
+                    v
+                })
+                .collect(),
+        )
     }
 }

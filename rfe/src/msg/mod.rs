@@ -111,6 +111,7 @@ pub type TlmSetId = u16;
 #[cfg_attr(feature = "reflect", derive(Reflect))]
 pub struct TlmSetItem {
     pub target: TargetMsg,
+    /// decimation 0 means sends every msg, decimation 1 means sends every other, etc
     pub decimation: u16,
     pub counter: u16,
 }

@@ -147,11 +147,17 @@ pub fn reflect_derive(input: TokenStream) -> TokenStream {
                         rfe::reflect::ReflectValue::None
                     }
                 
-                    fn variants(&self) -> alloc::vec::Vec<(&str, alloc::boxed::Box<dyn rfe::reflect::Reflect>)> {
+                    fn variants(&self) -> alloc::vec::Vec<(&'static str, alloc::boxed::Box<dyn rfe::reflect::Reflect>)> {
                         alloc::vec::Vec::new()
                     }
 
-                    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn rfe::reflect::Reflect> {
+                    fn convert_variant(&mut self, _i: usize) {}
+
+                    fn unwrap_variant(&mut self) -> Option<(&str, &mut dyn rfe::reflect::Reflect)> {
+                        None
+                    }
+
+                    fn as_vec(&mut self) -> Option<alloc::vec::Vec<&mut dyn rfe::reflect::Reflect>> {
                         None
                     }
                 }
@@ -162,7 +168,7 @@ pub fn reflect_derive(input: TokenStream) -> TokenStream {
 
         Data::Enum(data_enum) => {
             let variants = data_enum.variants;
-            let as_arms = variants.iter().enumerate().map(|(i, variant)| {
+            let convert_arms = variants.iter().enumerate().map(|(i, variant)| {
                 let variant_name = &variant.ident;
 
                 match &variant.fields {
@@ -170,7 +176,6 @@ pub fn reflect_derive(input: TokenStream) -> TokenStream {
                         quote! { 
                             if _i == #i {
                                 *self = Self::#variant_name;
-                                return Some(self);
                             } 
                         }
                     }
@@ -178,10 +183,28 @@ pub fn reflect_derive(input: TokenStream) -> TokenStream {
                         quote! {
                             if _i == #i {
                                 *self = Self::#variant_name(Default::default());
-                                if let Self::#variant_name(r) = self {
-                                    return Some(r);
-                                }
                             } 
+                        }
+                    }
+                    Fields::Named(_) => {
+                        panic!("Named fields not supported by Reflect");
+                    }
+                }
+            });
+
+            let unwrap_arms = variants.iter().enumerate().map(|(_i, variant)| {
+                let variant_name = &variant.ident;
+                let variant_name_s = variant_name.to_string();
+
+                match &variant.fields {
+                    Fields::Unit => {
+                        quote! { 
+                            Self::#variant_name => None,
+                        }
+                    }
+                    Fields::Unnamed(_) => {
+                        quote! {
+                            Self::#variant_name(v) => Some((#variant_name_s, v)),
                         }
                     }
                     Fields::Named(_) => {
@@ -198,16 +221,18 @@ pub fn reflect_derive(input: TokenStream) -> TokenStream {
                     Fields::Unit => {
                         quote! { 
                             {
+                                let name: &'static str = #variant_name_s;
                                 let value: alloc::boxed::Box<dyn rfe::reflect::Reflect> = alloc::boxed::Box::new(Self::#variant_name);
-                                variants.push((#variant_name_s, value)); 
+                                variants.push((name, value)); 
                             }
                          }
                     }
                     Fields::Unnamed(_) => {
                         quote! {              
                                 {
+                                    let name: &'static str = #variant_name_s;
                                     let value: alloc::boxed::Box<dyn rfe::reflect::Reflect> = alloc::boxed::Box::new(Self::#variant_name(Default::default()));
-                                    variants.push((#variant_name_s, value)); 
+                                    variants.push((name, value)); 
                                 }
                             }              
     
@@ -239,15 +264,24 @@ pub fn reflect_derive(input: TokenStream) -> TokenStream {
                         rfe::reflect::ReflectValue::None
                     }
                 
-                    fn variants(&self) -> alloc::vec::Vec<(&str, alloc::boxed::Box<dyn rfe::reflect::Reflect>)> {
+                    fn variants(&self) -> alloc::vec::Vec<(&'static str, alloc::boxed::Box<dyn rfe::reflect::Reflect>)> {
                         let mut variants = alloc::vec::Vec::new();
                         #(#variant_arms)*
                         variants
                     }
 
-                    fn as_variant(&mut self, _i: usize) -> Option<&mut dyn rfe::reflect::Reflect> {
-                        #(#as_arms)*
-                        panic!("variant incorrect");
+                    fn convert_variant(&mut self, _i: usize) {
+                        #(#convert_arms)*
+                    }
+
+                    fn unwrap_variant(&mut self) -> Option<(&str, &mut dyn rfe::reflect::Reflect)> {
+                        match self {
+                            #(#unwrap_arms)*
+                        }
+                    }
+
+                    fn as_vec(&mut self) -> Option<alloc::vec::Vec<&mut dyn rfe::reflect::Reflect>> {
+                        None
                     }
                 }
             }

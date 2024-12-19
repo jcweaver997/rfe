@@ -12,7 +12,6 @@ use std::{
 use anyhow::Result;
 use bincode::decode_from_std_read;
 use log::*;
-use rfe::to_csv::ToCsvClean;
 use rfe::{msg::MsgPacket, BINCODE_CONFIG};
 use simple_logger::SimpleLogger;
 
