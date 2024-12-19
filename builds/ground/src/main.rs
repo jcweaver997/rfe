@@ -2,7 +2,6 @@
 
 use std::{
     collections::HashMap,
-    fs::write,
     thread::{sleep, spawn},
     time::{Duration, Instant},
 };
@@ -10,9 +9,9 @@ use std::{
 use anyhow::anyhow;
 use anyhow::Result;
 use connector::{Connector, UdpConnector};
-use egui::Ui;
+use egui::{Layout, Ui};
 use log::*;
-use msg::{DsTlmSet, Msg, TargetMsg, TlmSetItem};
+use msg::Msg;
 use reflect::*;
 use rfe::macros::Reflect;
 use rfe::*;
@@ -82,14 +81,20 @@ impl Default for MyApp {
 
 fn build_command_ui_value_number(ui: &mut Ui, name: &str, cmd: &mut dyn Reflect) {
     let mut r = cmd.get_value().str();
-    ui.horizontal(|ui| {
-        ui.label(name);
-        ui.text_edit_singleline(&mut r);
-        cmd.set_value(ReflectValue::Str(r));
-    });
+    ui.with_layout(
+        Layout::left_to_right(egui::Align::Min)
+            .with_main_wrap(true)
+            .with_main_justify(false),
+        |ui| {
+            ui.label(name);
+            ui.text_edit_singleline(&mut r);
+            cmd.set_value(ReflectValue::Str(r));
+        },
+    );
 }
 
 fn build_command_ui(ui: &mut Ui, name: &str, cmd: &mut dyn Reflect) {
+    // ui.separator();
     match cmd.reflect_type() {
         ReflectType::Value => match cmd.get_value() {
             ReflectValue::None => {}
@@ -101,18 +106,49 @@ fn build_command_ui(ui: &mut Ui, name: &str, cmd: &mut dyn Reflect) {
             ReflectValue::I16(_) => build_command_ui_value_number(ui, name, cmd),
             ReflectValue::I32(_) => build_command_ui_value_number(ui, name, cmd),
             ReflectValue::I64(_) => build_command_ui_value_number(ui, name, cmd),
-            ReflectValue::Vec(_vec) => {}
+            ReflectValue::Vec(_vec) => {
+                ui.with_layout(Layout::top_down(egui::Align::Min), |ui| {
+                    ui.with_layout(
+                        Layout::left_to_right(egui::Align::Min).with_main_wrap(true),
+                        |ui| {
+                            ui.label(name);
+                            if ui.button("+").clicked() {
+                                cmd.vec_add();
+                            }
+                            if ui.button("-").clicked() {
+                                cmd.vec_remove();
+                            }
+                        },
+                    );
+                    if let Some(v) = cmd.as_vec() {
+                        ui.with_layout(
+                            Layout::left_to_right(egui::Align::Min).with_main_wrap(true),
+                            |ui| {
+                                for (i, cmd) in v.into_iter().enumerate() {
+                                    build_command_ui(ui, &format!("[{i}]"), cmd);
+                                }
+                            },
+                        );
+                    }
+                });
+            }
             ReflectValue::Str(_) => {}
             ReflectValue::Bool(_) => {}
         },
         ReflectType::Enumeration => {
             // variants
-
-            for (i, (name, _v)) in cmd.variants().into_iter().enumerate() {
-                if ui.button(name).clicked() {
-                    cmd.convert_variant(i);
-                }
-            }
+            ui.with_layout(
+                Layout::left_to_right(egui::Align::Min)
+                    .with_main_wrap(true)
+                    .with_main_justify(false),
+                |ui| {
+                    for (i, (name, _v)) in cmd.variants().into_iter().enumerate() {
+                        if ui.button(name).clicked() {
+                            cmd.convert_variant(i);
+                        }
+                    }
+                },
+            );
 
             // values
             if let Some((name, cmd)) = cmd.unwrap_variant() {
@@ -120,9 +156,16 @@ fn build_command_ui(ui: &mut Ui, name: &str, cmd: &mut dyn Reflect) {
             }
         }
         ReflectType::Structure => {
-            for (name, cmd) in cmd.fields().into_iter() {
-                build_command_ui(ui, name, cmd);
-            }
+            ui.with_layout(
+                Layout::left_to_right(egui::Align::Min)
+                    .with_main_wrap(true)
+                    .with_main_justify(false),
+                |ui| {
+                    for (name, cmd) in cmd.fields().into_iter() {
+                        build_command_ui(ui, name, cmd);
+                    }
+                },
+            );
         }
     }
 }

@@ -17,6 +17,8 @@ pub trait Reflect: std::fmt::Debug {
     fn convert_variant(&mut self, i: usize);
     fn unwrap_variant(&mut self) -> Option<(&str, &mut dyn Reflect)>;
     fn as_vec(&mut self) -> Option<Vec<&mut dyn Reflect>>;
+    fn vec_add(&mut self) {}
+    fn vec_remove(&mut self) {}
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -584,7 +586,7 @@ impl Reflect for bool {
     }
 }
 
-impl<T: Reflect> Reflect for Vec<T> {
+impl<T: Reflect + Default> Reflect for Vec<T> {
     fn reflect_type(&self) -> ReflectType {
         ReflectType::Value
     }
@@ -633,5 +635,15 @@ impl<T: Reflect> Reflect for Vec<T> {
                 })
                 .collect(),
         )
+    }
+
+    fn vec_add(&mut self) {
+        self.push(Default::default());
+    }
+
+    fn vec_remove(&mut self) {
+        if self.len() > 0 {
+            self.remove(self.len() - 1);
+        }
     }
 }
